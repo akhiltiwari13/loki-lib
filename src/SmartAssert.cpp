@@ -511,11 +511,37 @@ void CoutAssertPolicy::Debugger( const SmartAssertBase * )
 #elif ( defined _MSC_VER ) || ( defined __BORLANDC__) || ( defined __MWERKS__ )
 	__asm { int 3 };
 
-#elif defined(__GNUC__)  // GCC
-	__asm ("int $0x3");
+		#elif defined(__GNUC__) && !defined(__clang__)  // GCC and no clang
+    #if defined(__x86_64__) || defined(__i386__)
+        __asm("int $0x3");
+    #elif defined(__arm__) || defined(__aarch64__)
+        __builtin_trap();
+    #else
+        // Fallback for other architectures
+        #include <signal.h>
+        raise(SIGTRAP);
+    #endif
 
+// #else
+// 	#  error "Please supply instruction to DebugBreak (like 'int 3' on Intel processors)"
+// #endif
+#elif defined(_MSC_VER)  // MSVC
+    __debugbreak();
+#elif defined(__clang__)  // Clang
+    __builtin_debugtrap();
+#elif defined(__GNUC__) && !defined(__clang__)  // GCC but not Clang
+    #if defined(__x86_64__) || defined(__i386__)
+        __asm("int $0x3");
+    #elif defined(__arm__) || defined(__aarch64__)
+        __builtin_trap();
+    #else
+        // Fallback for other architectures
+        #include <signal.h>
+        raise(SIGTRAP);
+    #endif
 #else
-	#  error "Please supply instruction to DebugBreak (like 'int 3' on Intel processors)"
+    #error Unsupported platform
+		#  error "Please supply instruction to DebugBreak (like 'int 3' on Intel processors)"
 #endif
 }
 
